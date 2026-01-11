@@ -54,8 +54,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.WriteIndented = builder.Environment.IsDevelopment();
 });
 
-// Add middleware
-builder.Services.AddTransient<GlobalExceptionMiddleware>();
+// Note: GlobalExceptionMiddleware is registered via app.UseMiddleware<GlobalExceptionMiddleware>() later
 
 var app = builder.Build();
 
