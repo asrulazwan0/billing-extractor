@@ -6,11 +6,14 @@ namespace BillingExtractor.Infrastructure.Services;
 
 public class InvoiceValidator : IInvoiceValidator
 {
+    private readonly IInvoiceRepository _invoiceRepository;
     private readonly ILogger<InvoiceValidator> _logger;
 
     public InvoiceValidator(
+        IInvoiceRepository invoiceRepository,
         ILogger<InvoiceValidator> logger)
     {
+        _invoiceRepository = invoiceRepository ?? throw new ArgumentNullException(nameof(invoiceRepository));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -67,6 +70,23 @@ public class InvoiceValidator : IInvoiceValidator
             }
         }
 
+        // Amount Verification: Validate that line item amounts sum up correctly to the stated total
+        if (invoice.LineItems?.Any() == true)
+        {
+            var calculatedTotal = invoice.LineItems.Sum(item => item.LineTotal);
+            var statedTotal = invoice.TotalAmount;
+
+            // Using a small epsilon for decimal comparison if needed, but here simple != should work for currency
+            if (Math.Abs(calculatedTotal - statedTotal) > 0.01m)
+            {
+                warnings.Add(new ValidationWarningDto 
+                { 
+                    Code = "AMOUNT_MISMATCH", 
+                    Message = $"Sum of line items ({calculatedTotal}) does not match invoice total ({statedTotal})." 
+                });
+            }
+        }
+
         result.Errors = errors;
         result.Warnings = warnings;
         result.IsValid = !errors.Any();
@@ -79,12 +99,13 @@ public class InvoiceValidator : IInvoiceValidator
 
     public async Task<bool> IsDuplicateAsync(InvoiceDto invoice, CancellationToken cancellationToken = default)
     {
-        // This is a simplified implementation - in a real scenario, you'd check against the database
-        // For now, we'll return false to allow all invoices
-        _logger.LogInformation("Checking for duplicate invoice: {InvoiceNumber}", invoice.InvoiceNumber);
+        _logger.LogInformation("Checking for duplicate invoice: {InvoiceNumber} for vendor {VendorName}", 
+            invoice.InvoiceNumber, invoice.VendorName);
         
-        // In a real implementation, you would query the database to check if an invoice with the same
-        // number, provider, and date already exists
-        return await Task.FromResult(false);
+        return await _invoiceRepository.ExistsAsync(
+            invoice.InvoiceNumber, 
+            invoice.VendorName, 
+            invoice.InvoiceDate, 
+            cancellationToken);
     }
 }

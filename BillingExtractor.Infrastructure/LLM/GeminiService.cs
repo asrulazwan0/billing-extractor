@@ -167,6 +167,7 @@ public class GeminiService : BaseLLMService
                 TotalAmount = extractedData.TotalAmount ?? 0,
                 TaxAmount = extractedData.TaxAmount,
                 Subtotal = extractedData.SubTotal,
+                ConfidenceScore = extractedData.ConfidenceScore,
                 Status = "Extracted",
                 ProcessedAt = DateTime.UtcNow,
                 LineItems = extractedData.LineItems?.Select((item, index) => new LineItemDto
@@ -201,6 +202,7 @@ public class GeminiService : BaseLLMService
         public decimal? TaxAmount { get; set; }
         public decimal? TotalAmount { get; set; }
         public string? Currency { get; set; }
+        public double? ConfidenceScore { get; set; }
         public List<ExtractedLineItem>? LineItems { get; set; }
     }
 

@@ -19,6 +19,7 @@ public class InvoiceDto
     public List<LineItemDto> LineItems { get; set; } = new();
     public List<ValidationWarningDto> ValidationWarnings { get; set; } = new();
     public List<ValidationErrorDto> ValidationErrors { get; set; } = new();
+    public double? ConfidenceScore { get; set; }
     public string? ProcessingError { get; set; }
 }
 

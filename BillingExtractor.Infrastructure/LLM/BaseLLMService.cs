@@ -77,7 +77,8 @@ REQUIRED OUTPUT FORMAT (JSON):
       ""unitPrice"": ""number (required)"",
       ""lineTotal"": ""number (required)""
     }
-  ]
+  ],
+  ""confidenceScore"": ""number (0.0 to 1.0, represent your overall confidence in the extraction)""
 }
 
 RULES:
@@ -122,6 +123,7 @@ INVOICE DATA TO EXTRACT:";
                 TotalAmount = extractionResult.TotalAmount ?? 0,
                 TaxAmount = extractionResult.TaxAmount,
                 Subtotal = extractionResult.Subtotal,
+                ConfidenceScore = extractionResult.ConfidenceScore,
                 Status = "Extracted",
                 ProcessedAt = DateTime.UtcNow,
                 LineItems = extractionResult.LineItems?.Select((item, index) => new LineItemDto
@@ -164,6 +166,7 @@ INVOICE DATA TO EXTRACT:";
         public decimal? TotalAmount { get; set; }
         public decimal? TaxAmount { get; set; }
         public decimal? Subtotal { get; set; }
+        public double? ConfidenceScore { get; set; }
         public List<LineItemResult>? LineItems { get; set; }
     }
 
