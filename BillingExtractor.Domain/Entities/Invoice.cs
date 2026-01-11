@@ -15,6 +15,9 @@ public class Invoice : EntityBase
     public Money TotalAmount { get; private set; } = null!;
     public Money? TaxAmount { get; private set; }
     public Money? Subtotal { get; private set; }
+    public string? OriginalFileName { get; private set; }
+    public string? FilePath { get; private set; }
+    public string? FileHash { get; private set; }
     public InvoiceStatus Status { get; private set; } = InvoiceStatus.Pending;
     public DateTime ProcessedAt { get; private set; } = DateTime.UtcNow;
 
@@ -23,6 +26,11 @@ public class Invoice : EntityBase
     public ICollection<ValidationWarning> ValidationWarnings { get; private set; } = new List<ValidationWarning>();
     public ICollection<ValidationError> ValidationErrors { get; private set; } = new List<ValidationError>();
     public string? ProcessingError { get; private set; }
+
+    public void SetProcessingError(string? error)
+    {
+        ProcessingError = error;
+    }
 
     // Private constructor for EF Core
     private Invoice() { }
@@ -36,7 +44,10 @@ public class Invoice : EntityBase
         Money? taxAmount = null,
         Money? subtotal = null,
         DateTime? dueDate = null,
-        string currency = "USD")
+        string currency = "USD",
+        string? originalFileName = null,
+        string? filePath = null,
+        string? fileHash = null)
     {
         if (string.IsNullOrWhiteSpace(invoiceNumber))
             throw new ArgumentException("Invoice number is required", nameof(invoiceNumber));
@@ -59,6 +70,9 @@ public class Invoice : EntityBase
             TotalAmount = totalAmount,
             TaxAmount = taxAmount,
             Subtotal = subtotal,
+            OriginalFileName = originalFileName,
+            FilePath = filePath,
+            FileHash = fileHash,
             Status = InvoiceStatus.Pending,
             ProcessedAt = DateTime.UtcNow
         };
@@ -78,6 +92,18 @@ public class Invoice : EntityBase
     public void AddValidationWarning(string code, string message)
     {
         ValidationWarnings.Add(ValidationWarning.Create(code, message));
+    }
+
+    public void SetFileMetadata(string? originalFileName, string? filePath, string? fileHash)
+    {
+        OriginalFileName = originalFileName;
+        FilePath = filePath;
+        FileHash = fileHash;
+    }
+
+    public void AddLineItem(LineItem lineItem)
+    {
+        LineItems.Add(lineItem);
     }
 }
 
