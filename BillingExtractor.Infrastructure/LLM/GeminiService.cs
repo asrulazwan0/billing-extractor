@@ -218,6 +218,6 @@ public class GeminiOptions
 {
     public string ProjectId { get; set; } = string.Empty;
     public string Location { get; set; } = "us-central1";
-    public string ModelId { get; set; } = "gemini-1.5-pro";
+    public string ModelId { get; set; } = "gemini-1.5-flash";
     public string? ApiKey { get; set; }
 }
