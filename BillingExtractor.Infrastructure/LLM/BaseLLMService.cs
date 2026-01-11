@@ -84,12 +84,14 @@ REQUIRED OUTPUT FORMAT (JSON):
 }
 
 RULES:
-1. Extract all amounts as numbers (not strings)
-2. If currency is not specified, use USD
-3. Format dates as YYYY-MM-DD
-4. If any field cannot be found, use null or empty string
-5. Validate that line item totals match quantity * unit price
-6. Return ONLY the JSON, no additional text
+1. Extract all amounts as numbers (not strings).
+2. If currency is not specified, use USD.
+3. Format dates as YYYY-MM-DD.
+4. If any field cannot be found, use null for optional fields and reasonable defaults for required fields.
+5. Ensure lineItems is an array of objects, each object representing one line item.
+6. Validate that line total matches quantity * unit price.
+7. Return ONLY valid JSON. No preamble, no markdown blocks, no extra text.
+8. Ensure all property names are double-quoted.
 
 INVOICE DATA TO EXTRACT:";
     }
