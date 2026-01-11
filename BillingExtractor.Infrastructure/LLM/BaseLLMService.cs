@@ -18,24 +18,21 @@ public abstract class BaseLLMService : IInvoiceExtractor
 
     public async Task<List<InvoiceDto>> ExtractInvoicesAsync(List<(Stream Stream, string FileName)> files, CancellationToken cancellationToken = default)
     {
-        var results = new List<InvoiceDto>();
-
-        foreach (var file in files)
+        var tasks = files.Select(async file =>
         {
             try
             {
-                var invoice = await ExtractInvoiceAsync(file.Stream, file.FileName, cancellationToken);
-                results.Add(invoice);
+                return await ExtractInvoiceAsync(file.Stream, file.FileName, cancellationToken);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error extracting invoice from {FileName}", file.FileName);
-                // Create a failed invoice DTO
-                results.Add(CreateFailedInvoiceDto(file.FileName, ex.Message));
+                return CreateFailedInvoiceDto(file.FileName, ex.Message);
             }
-        }
+        });
 
-        return results;
+        var results = await Task.WhenAll(tasks);
+        return results.ToList();
     }
 
     protected virtual InvoiceDto CreateFailedInvoiceDto(string fileName, string error)
