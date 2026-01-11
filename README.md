@@ -122,12 +122,19 @@ The application can be deployed using Docker containers:
 ```bash
 # Copy the example file and update with your values
 cp .env.example .env
-# Then edit .env with your actual API keys and passwords
+# Then edit .env with your actual API keys
 ```
 
-2. Build and run the containers:
+2. Choose your database option:
+
+**Option A: SQL Server (default)**
 ```bash
 docker-compose up --build
+```
+
+**Option B: SQLite (simpler setup)**
+```bash
+docker-compose -f docker-compose.sqlite.yml up --build
 ```
 
 The application will be available at `http://localhost:8080`
