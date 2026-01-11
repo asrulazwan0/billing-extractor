@@ -2,6 +2,7 @@ using BillingExtractor.Application.DTOs;
 using BillingExtractor.Application.Interfaces;
 using BillingExtractor.Domain.Entities;
 using BillingExtractor.Domain.ValueObjects;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace BillingExtractor.Infrastructure.Services;
@@ -52,35 +53,50 @@ public class InvoiceProcessingService : IInvoiceProcessingService
             var validationResults = ValidateInvoice(extractedInvoice);
             
             // Create domain entity
-            var invoice = new Invoice
+            var invoice = Invoice.Create(
+                extractedInvoice.InvoiceNumber,
+                extractedInvoice.InvoiceDate,
+                extractedInvoice.VendorName,
+                extractedInvoice.CustomerName,
+                new Money(extractedInvoice.TotalAmount, extractedInvoice.Currency),
+                extractedInvoice.TaxAmount.HasValue ? new Money(extractedInvoice.TaxAmount.Value, extractedInvoice.Currency) : null,
+                extractedInvoice.Subtotal.HasValue ? new Money(extractedInvoice.Subtotal.Value, extractedInvoice.Currency) : null,
+                extractedInvoice.DueDate,
+                extractedInvoice.Currency
+            );
+
+            invoice.SetFileMetadata(fileName, filePath, fileHash);
+            invoice.UpdateStatus(InvoiceStatus.Processed);
+
+            // Add validation results
+            foreach (var error in validationResults.Errors)
             {
-                Id = extractedInvoice.Id != Guid.Empty ? extractedInvoice.Id : Guid.NewGuid(),
-                InvoiceNumber = extractedInvoice.InvoiceNumber,
-                InvoiceDate = extractedInvoice.InvoiceDate,
-                DueDate = extractedInvoice.DueDate,
-                VendorName = extractedInvoice.VendorName,
-                CustomerName = extractedInvoice.CustomerName,
-                TotalAmount = new Money(extractedInvoice.TotalAmount, extractedInvoice.Currency),
-                TaxAmount = extractedInvoice.TaxAmount.HasValue ? new Money(extractedInvoice.TaxAmount.Value, extractedInvoice.Currency) : null,
-                Subtotal = extractedInvoice.Subtotal.HasValue ? new Money(extractedInvoice.Subtotal.Value, extractedInvoice.Currency) : null,
-                OriginalFileName = fileName,
-                FilePath = filePath,
-                FileHash = fileHash,
-                Status = InvoiceStatus.Processed,
-                ProcessedAt = DateTime.UtcNow,
-                ValidationErrors = validationResults.Errors.Select(e => new ValidationError(e.Code, e.Message)).ToList(),
-                ValidationWarnings = validationResults.Warnings.Select(w => new ValidationWarning(w.Code, w.Message)).ToList(),
-                LineItems = extractedInvoice.LineItems?.Select(li => new LineItem
+                invoice.AddValidationError(error.Code, error.Message);
+            }
+
+            foreach (var warning in validationResults.Warnings)
+            {
+                invoice.AddValidationWarning(warning.Code, warning.Message);
+            }
+
+            // Add line items
+            if (extractedInvoice.LineItems != null)
+            {
+                foreach (var li in extractedInvoice.LineItems)
                 {
-                    Id = li.Id != Guid.Empty ? li.Id : Guid.NewGuid(),
-                    Description = li.Description,
-                    Quantity = li.Quantity,
-                    Unit = li.Unit,
-                    UnitPrice = new Money(li.UnitPrice, extractedInvoice.Currency),
-                    LineTotal = new Money(li.LineTotal, extractedInvoice.Currency),
-                    LineNumber = li.LineNumber
-                }).ToList() ?? new List<LineItem>()
-            };
+                    var moneyUnitPrice = new Money(li.UnitPrice, extractedInvoice.Currency);
+                    var lineItem = LineItem.Create(
+                        li.LineNumber,
+                        li.Description,
+                        li.Quantity,
+                        li.Unit,
+                        moneyUnitPrice,
+                        invoice.Id
+                    );
+
+                    invoice.AddLineItem(lineItem);
+                }
+            }
 
             // Check for similar invoices
             var similarInvoices = await _repository.FindSimilarAsync(
@@ -91,8 +107,8 @@ public class InvoiceProcessingService : IInvoiceProcessingService
 
             if (similarInvoices.Any())
             {
-                invoice.ValidationWarnings.Add(new ValidationWarning("DUPLICATE_POSSIBLE", 
-                    $"Similar invoice(s) with number {invoice.InvoiceNumber} already exist for vendor {invoice.VendorName}"));
+                invoice.AddValidationWarning("DUPLICATE_POSSIBLE",
+                    $"Similar invoice(s) with number {invoice.InvoiceNumber} already exist for vendor {invoice.VendorName}");
             }
 
             // Save to database
@@ -108,21 +124,17 @@ public class InvoiceProcessingService : IInvoiceProcessingService
             _logger.LogError(ex, "Error processing invoice {FileName}", fileName);
 
             // Create failed invoice record
-            var failedInvoice = new Invoice
-            {
-                Id = Guid.NewGuid(),
-                InvoiceNumber = "PROCESSING_FAILED",
-                InvoiceDate = DateTime.UtcNow,
-                VendorName = "Unknown",
-                CustomerName = "Unknown",
-                TotalAmount = new Money(0, "USD"),
-                OriginalFileName = fileName,
-                FilePath = filePath,
-                FileHash = fileHash,
-                Status = InvoiceStatus.Failed,
-                ProcessedAt = DateTime.UtcNow,
-                ProcessingError = ex.Message
-            };
+            var failedInvoice = Invoice.Create(
+                "PROCESSING_FAILED",
+                DateTime.UtcNow,
+                "Unknown",
+                "Unknown",
+                new Money(0, "USD")
+            );
+
+            failedInvoice.SetFileMetadata(fileName, filePath, fileHash);
+            failedInvoice.UpdateStatus(InvoiceStatus.Failed);
+            failedInvoice.SetProcessingError(ex.Message);
 
             await _repository.AddAsync(failedInvoice, cancellationToken);
             await _repository.SaveChangesAsync(cancellationToken);
@@ -131,7 +143,48 @@ public class InvoiceProcessingService : IInvoiceProcessingService
         }
     }
 
-    public async Task<List<Guid>> ProcessInvoicesAsync(List<(Stream Stream, string FileName)> files, CancellationToken cancellationToken = default)
+    public async Task<ProcessInvoicesResponse> ProcessInvoicesAsync(List<IFormFile> files, bool validate = true, bool checkDuplicates = true, CancellationToken cancellationToken = default)
+    {
+        var response = new ProcessInvoicesResponse();
+        var results = new List<InvoiceDto>();
+
+        foreach (var file in files)
+        {
+            try
+            {
+                using var stream = file.OpenReadStream();
+                var invoice = await _extractor.ExtractInvoiceAsync(stream, file.FileName, cancellationToken);
+
+                // Add validation logic if enabled
+                if (validate)
+                {
+                    // Perform validation here
+                }
+
+                // Check for duplicates if enabled
+                if (checkDuplicates)
+                {
+                    // Check for duplicates here
+                }
+
+                results.Add(invoice);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to process invoice {FileName}", file.FileName);
+                response.Errors.Add($"Failed to process {file.FileName}: {ex.Message}");
+            }
+        }
+
+        response.Success = !response.Errors.Any();
+        response.Invoices = results;
+        response.TotalProcessed = results.Count;
+        response.TotalFailed = response.Errors.Count;
+
+        return response;
+    }
+
+    public async Task<List<Guid>> ProcessInvoicesAsListAsync(List<(Stream Stream, string FileName)> files, CancellationToken cancellationToken = default)
     {
         var results = new List<Guid>();
 

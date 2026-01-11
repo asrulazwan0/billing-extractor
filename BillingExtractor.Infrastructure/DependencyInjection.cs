@@ -1,4 +1,5 @@
 using BillingExtractor.Application.Interfaces;
+using BillingExtractor.Infrastructure.FileStorage;
 using BillingExtractor.Infrastructure.LLM;
 using BillingExtractor.Infrastructure.Persistence;
 using BillingExtractor.Infrastructure.Repositories;
@@ -24,12 +25,16 @@ public static class DependencyInjection
         services.AddScoped<IInvoiceProcessingService, InvoiceProcessingService>();
 
         // LLM Services - Register based on configuration
-        var llmProvider = configuration.GetValue<string>("LLM:Provider", "Gemini");
-        
-        if (llmProvider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase))
+        var llmProvider = configuration["LLM:Provider"] ?? "Gemini";
+
+        if (llmProvider.Equals("Mock", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddScoped<IInvoiceExtractor, MockLLMService>();
+        }
+        else if (llmProvider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase))
         {
             services.AddHttpClient<OpenAIService>();
-            services.Configure<OpenAIOptions>(configuration.GetSection("LLM:OpenAI"));
+            services.Configure<OpenAIOptions>(configuration.GetSection("OpenAI"));
             services.AddScoped<IInvoiceExtractor, OpenAIService>();
         }
         else

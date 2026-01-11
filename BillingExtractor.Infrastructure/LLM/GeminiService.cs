@@ -1,5 +1,7 @@
 using Google.Cloud.AIPlatform.V1;
+using Google.Protobuf;
 using System.Text;
+using BillingExtractor.Application.DTOs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -65,8 +67,8 @@ public class GeminiService : BaseLLMService
                 },
                 GenerationConfig = new GenerationConfig
                 {
-                    Temperature = 0.1,
-                    TopP = 0.8,
+                    Temperature = 0.1f,
+                    TopP = 0.8f,
                     TopK = 40,
                     MaxOutputTokens = 2048,
                     ResponseMimeType = "application/json"

@@ -25,31 +25,31 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Invoice>().OwnsOne(i => i.TotalAmount, money =>
         {
             money.Property(m => m.Amount).HasColumnName("TotalAmount").HasPrecision(18, 2);
-            money.Property(m => m.Currency).HasColumnName("Currency").HasMaxLength(3);
+            money.Property(m => m.CurrencyCode).HasColumnName("Currency").HasMaxLength(3);
         });
 
         modelBuilder.Entity<Invoice>().OwnsOne(i => i.TaxAmount, money =>
         {
             money.Property(m => m.Amount).HasColumnName("TaxAmount").HasPrecision(18, 2);
-            money.Property(m => m.Currency).HasColumnName("TaxCurrency").HasMaxLength(3);
+            money.Property(m => m.CurrencyCode).HasColumnName("TaxCurrency").HasMaxLength(3);
         });
 
         modelBuilder.Entity<Invoice>().OwnsOne(i => i.Subtotal, money =>
         {
             money.Property(m => m.Amount).HasColumnName("Subtotal").HasPrecision(18, 2);
-            money.Property(m => m.Currency).HasColumnName("SubtotalCurrency").HasMaxLength(3);
+            money.Property(m => m.CurrencyCode).HasColumnName("SubtotalCurrency").HasMaxLength(3);
         });
 
         modelBuilder.Entity<LineItem>().OwnsOne(li => li.UnitPrice, money =>
         {
             money.Property(m => m.Amount).HasColumnName("UnitPrice").HasPrecision(18, 2);
-            money.Property(m => m.Currency).HasColumnName("UnitCurrency").HasMaxLength(3);
+            money.Property(m => m.CurrencyCode).HasColumnName("UnitCurrency").HasMaxLength(3);
         });
 
         modelBuilder.Entity<LineItem>().OwnsOne(li => li.LineTotal, money =>
         {
             money.Property(m => m.Amount).HasColumnName("LineTotal").HasPrecision(18, 2);
-            money.Property(m => m.Currency).HasColumnName("LineCurrency").HasMaxLength(3);
+            money.Property(m => m.CurrencyCode).HasColumnName("LineCurrency").HasMaxLength(3);
         });
 
         // Configure JSON serialization for collections

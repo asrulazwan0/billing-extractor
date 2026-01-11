@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
+using BillingExtractor.Application.DTOs;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -9,7 +10,6 @@ public class OpenAIService : BaseLLMService
 {
     private readonly HttpClient _httpClient;
     private readonly OpenAIOptions _options;
-    private readonly ILogger<OpenAIService> _logger;
 
     public OpenAIService(
         HttpClient httpClient,
@@ -18,7 +18,6 @@ public class OpenAIService : BaseLLMService
     {
         _httpClient = httpClient;
         _options = options.Value;
-        _logger = logger;
 
         _httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", _options.ApiKey);

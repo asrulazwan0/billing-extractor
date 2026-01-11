@@ -62,13 +62,18 @@ public class LocalFileStorageService : IFileStorageService
         return false;
     }
 
+    public async Task<bool> FileExistsAsync(string filePath, CancellationToken cancellationToken = default)
+    {
+        return File.Exists(filePath);
+    }
+
     public async Task<string> CalculateFileHashAsync(Stream fileStream, CancellationToken cancellationToken = default)
     {
         using var sha256 = System.Security.Cryptography.SHA256.Create();
         fileStream.Position = 0; // Reset position to beginning
         var hashBytes = await sha256.ComputeHashAsync(fileStream, cancellationToken);
         fileStream.Position = 0; // Reset position again for further use
-        
+
         return BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
     }
 }
