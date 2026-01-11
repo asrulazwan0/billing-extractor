@@ -108,6 +108,45 @@ cd BillingExtractor.Api/bin/Release/net8.0/publish
 dotnet BillingExtractor.Api.dll
 ```
 
+## 🐳 Docker Deployment
+
+The application can be deployed using Docker containers:
+
+### Prerequisites
+- Docker Desktop or Docker Engine
+- Docker Compose
+
+### Quick Start with Docker Compose
+
+1. Create a `.env` file with your API keys:
+```bash
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_PROJECT_ID=your-project-id
+GEMINI_LOCATION=us-central1
+```
+
+2. Build and run the containers:
+```bash
+docker-compose up --build
+```
+
+The application will be available at `http://localhost:8080`
+
+### Building Docker Image Manually
+
+```bash
+# Build the image
+docker build -t billing-extractor .
+
+# Run the container (requires database connection)
+docker run -p 8080:80 -e ConnectionStrings__DefaultConnection="..." billing-extractor
+```
+
+### Docker Compose Services
+- `billingextractor`: Main API application
+- `mssql`: SQL Server database for persistence
+- File storage volume for uploaded documents
+
 ## 🧪 Running Tests
 
 ```bash
