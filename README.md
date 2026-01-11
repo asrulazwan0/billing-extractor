@@ -192,27 +192,6 @@ The architecture supports:
 - Additional file storage backends
 - Extended business logic
 
-## 📝 Design Decisions
-
-1. **Clean Architecture**: Ensures separation of concerns and testability
-2. **CQRS Pattern**: Separates read and write operations for better performance
-3. **MediatR Pipeline**: Enables cross-cutting concerns like logging and validation
-4. **Value Objects**: Strong typing for monetary values and business concepts
-5. **Repository Pattern**: Abstracts data access for better testability
-6. **Async Programming**: Full async/await implementation for scalability
-
-## 🎯 Use Cases
-
-Perfect for:
-- Small to medium grocery stores managing supplier invoices
-- Businesses with manual invoice processing workflows
-- Organizations looking to automate data entry from documents
-- Companies dealing with multiple suppliers and varied invoice formats
-
-## 📞 Support
-
-For questions or issues, please contact the development team or submit an issue on the repository.
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
