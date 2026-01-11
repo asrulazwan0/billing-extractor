@@ -27,10 +27,4 @@ public abstract class EntityBase
     public override int GetHashCode() => Id.GetHashCode();
 }
 
-public abstract class DomainEventBase
-{
-    public DateTime OccurredOn { get; } = DateTime.UtcNow;
-    public Guid Id { get; } = Guid.NewGuid();
-}
-
 public interface IAggregateRoot { }

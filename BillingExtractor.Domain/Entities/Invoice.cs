@@ -1,5 +1,6 @@
 using BillingExtractor.Domain.Common;
 using BillingExtractor.Domain.ValueObjects;
+using BillingExtractor.Domain.Events;
 
 namespace BillingExtractor.Domain.Entities;
 
