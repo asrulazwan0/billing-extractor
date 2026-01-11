@@ -1,4 +1,5 @@
 using BillingExtractor.Application.DTOs;
+using Microsoft.AspNetCore.Http;
 
 namespace BillingExtractor.Application.Interfaces;
 
@@ -19,6 +20,24 @@ public interface IFileProcessor
     Task<byte[]> ReadFileAsync(Stream stream, CancellationToken cancellationToken = default);
     string CalculateFileHash(byte[] fileData);
     bool IsValidFileType(string fileName);
+}
+
+public interface IInvoiceProcessingService
+{
+    Task<ProcessInvoicesResponse> ProcessInvoicesAsync(
+        List<IFormFile> files,
+        bool validate = true,
+        bool checkDuplicates = true,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IFileStorageService
+{
+    Task<string> SaveFileAsync(Stream fileStream, string fileName, CancellationToken cancellationToken = default);
+    Task<Stream> GetFileAsync(string filePath, CancellationToken cancellationToken = default);
+    Task<bool> DeleteFileAsync(string filePath, CancellationToken cancellationToken = default);
+    Task<bool> FileExistsAsync(string filePath, CancellationToken cancellationToken = default);
+    Task<string> CalculateFileHashAsync(Stream fileStream, CancellationToken cancellationToken = default);
 }
 
 public class ValidationResult
