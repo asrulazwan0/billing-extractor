@@ -153,7 +153,6 @@ BillingExtractor/
 ├── BillingExtractor.Application/  # Business logic, commands, queries, DTOs
 ├── BillingExtractor.Domain/       # Entities, value objects, domain events
 ├── BillingExtractor.Infrastructure/ # Data access, LLM services, file storage
-└── BillingExtractor.Web/          # Legacy web project (not actively used)
 ```
 
 ## 🔐 Security Considerations
