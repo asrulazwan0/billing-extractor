@@ -789,6 +789,12 @@ class BillingExtractorApp {
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new BillingExtractorApp();
 
+    const currentYear = new Date().getFullYear();
+    const copyrightElement = document.querySelector('.footer-bottom p:first-child');
+    if (copyrightElement) {
+        copyrightElement.innerHTML = `&copy; ${currentYear} Billing Extractor. AI-powered invoice processing system.`;
+    }
+
     // Add some sample CSS for modal tables
     const modalStyles = document.createElement('style');
     modalStyles.textContent = `
