@@ -51,7 +51,8 @@ public static class DependencyInjection
         else
         {
             // Default to Gemini
-            services.Configure<GeminiOptions>(configuration.GetSection("LLM:Gemini"));
+            services.AddHttpClient<GeminiService>();
+            services.Configure<GeminiOptions>(configuration.GetSection("Gemini"));
             services.AddScoped<IInvoiceExtractor, GeminiService>();
         }
 

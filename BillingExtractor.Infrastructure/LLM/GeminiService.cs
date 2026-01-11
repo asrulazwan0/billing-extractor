@@ -1,5 +1,4 @@
-using Google.Cloud.AIPlatform.V1;
-using Google.Protobuf;
+using System.Net.Http.Headers;
 using System.Text;
 using BillingExtractor.Application.DTOs;
 using Microsoft.Extensions.Logging;
@@ -9,17 +8,22 @@ namespace BillingExtractor.Infrastructure.LLM;
 
 public class GeminiService : BaseLLMService
 {
+    private readonly HttpClient _httpClient;
     private readonly GeminiOptions _options;
-    private readonly PredictionServiceClient _predictionServiceClient;
 
     public GeminiService(
+        HttpClient httpClient,
         IOptions<GeminiOptions> options,
         ILogger<GeminiService> logger) : base(logger)
     {
+        _httpClient = httpClient;
         _options = options.Value;
-        // Note: In production, you'd want to properly initialize the client
-        // This is simplified for the assessment
-        _predictionServiceClient = PredictionServiceClient.Create();
+
+        // Set up the base address for Gemini API
+        _httpClient.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
+
+        // Set default headers
+        _httpClient.DefaultRequestHeaders.Clear();
     }
 
     public override async Task<InvoiceDto> ExtractInvoiceAsync(Stream fileStream, string fileName, CancellationToken cancellationToken = default)
@@ -28,65 +32,55 @@ public class GeminiService : BaseLLMService
         {
             _logger.LogInformation("Extracting invoice from {FileName} using Gemini", fileName);
 
-            // Read file content
-            using var memoryStream = new MemoryStream();
-            await fileStream.CopyToAsync(memoryStream, cancellationToken);
-            var fileBytes = memoryStream.ToArray();
+            // Copy the stream to a memory stream to prevent disposal issues
+            byte[] fileBytes;
+            using (var memoryStream = new MemoryStream())
+            {
+                await fileStream.CopyToAsync(memoryStream, cancellationToken);
+                fileBytes = memoryStream.ToArray();
+            }
 
-            // Convert to base64 for Gemini
             var base64Content = Convert.ToBase64String(fileBytes);
 
             // Determine MIME type
             var mimeType = GetMimeType(fileName);
 
-            // Create prompt with image
-            var prompt = $"{CreateExtractionPrompt()}\n\nFile: {fileName}\nMIME Type: {mimeType}";
-
-            // Call Gemini API
-            var request = new GenerateContentRequest
+            // Create the request payload
+            var requestBody = new
             {
-                Model = $"projects/{_options.ProjectId}/locations/{_options.Location}/publishers/google/models/{_options.ModelId}",
-                Contents =
+                contents = new[]
                 {
-                    new Content
+                    new
                     {
-                        Role = "user",
-                        Parts =
+                        parts = new object[]
                         {
-                            new Part { Text = prompt },
-                            new Part
-                            {
-                                InlineData = new Blob
-                                {
-                                    MimeType = mimeType,
-                                    Data = ByteString.CopyFrom(fileBytes)
-                                }
-                            }
+                            new { text = CreateExtractionPrompt() },
+                            new { inline_data = new { mime_type = mimeType, data = base64Content } }
                         }
                     }
-                },
-                GenerationConfig = new GenerationConfig
-                {
-                    Temperature = 0.1f,
-                    TopP = 0.8f,
-                    TopK = 40,
-                    MaxOutputTokens = 2048,
-                    ResponseMimeType = "application/json"
                 }
             };
 
-            var response = await _predictionServiceClient.GenerateContentAsync(request, cancellationToken);
+            var jsonRequest = System.Text.Json.JsonSerializer.Serialize(requestBody);
+            var content = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
 
-            if (response.Candidates.Count == 0)
+            // Construct the API endpoint URL with the API key as a query parameter
+            // Using the same API endpoint as the working example
+            var apiUrl = $"v1beta/models/{_options.ModelId}:generateContent?key={_options.ApiKey}";
+
+            var response = await _httpClient.PostAsync(apiUrl, content, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
             {
-                throw new InvalidOperationException("No response from Gemini API");
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Gemini API error: {StatusCode} - {Error}", response.StatusCode, errorContent);
+                throw new HttpRequestException($"Gemini API request failed: {response.StatusCode} - {errorContent}");
             }
 
-            var jsonResponse = response.Candidates[0].Content.Parts[0].Text;
+            var responseContent = await response.Content.ReadAsStringAsync();
+            _logger.LogDebug("Gemini API response received: {Response}", responseContent);
 
-            _logger.LogDebug("Gemini response received: {Response}", jsonResponse);
-
-            return ParseLLMResponse(jsonResponse, fileName);
+            return ParseGeminiResponse(responseContent, fileName);
         }
         catch (Exception ex)
         {
@@ -106,6 +100,95 @@ public class GeminiService : BaseLLMService
             ".png" => "image/png",
             _ => "application/octet-stream"
         };
+    }
+
+    private InvoiceDto ParseGeminiResponse(string jsonResponse, string fileName)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(jsonResponse);
+            var content = doc.RootElement
+                .GetProperty("candidates")[0]
+                .GetProperty("content")
+                .GetProperty("parts")[0]
+                .GetProperty("text")
+                .GetString();
+
+            if (string.IsNullOrEmpty(content))
+                throw new Exception("Empty response from Gemini");
+
+            // Sometimes Gemini wraps JSON in markdown blocks
+            if (content.StartsWith("```json"))
+            {
+                content = content.Replace("```json", "").Replace("```", "").Trim();
+            }
+
+            var options = new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            var extractedData = System.Text.Json.JsonSerializer.Deserialize<ExtractedInvoice>(content, options);
+
+            if (extractedData == null)
+                throw new Exception("Failed to deserialize extraction results");
+
+            // Map the extracted data to InvoiceDto
+            var invoiceDto = new InvoiceDto
+            {
+                Id = Guid.NewGuid(),
+                InvoiceNumber = extractedData.InvoiceNumber ?? $"UNKNOWN_{Guid.NewGuid().ToString()[..8]}",
+                InvoiceDate = extractedData.InvoiceDate ?? DateTime.UtcNow,
+                DueDate = extractedData.DueDate,
+                VendorName = extractedData.VendorName ?? "Unknown Vendor",
+                CustomerName = extractedData.CustomerName ?? string.Empty,
+                Currency = extractedData.Currency?.ToUpper() ?? "USD",
+                TotalAmount = extractedData.TotalAmount,
+                TaxAmount = extractedData.TaxAmount,
+                Subtotal = extractedData.SubTotal,
+                Status = "Extracted",
+                ProcessedAt = DateTime.UtcNow,
+                LineItems = extractedData.LineItems?.Select((item, index) => new LineItemDto
+                {
+                    LineNumber = index + 1,
+                    Description = item.Description ?? $"Item {index + 1}",
+                    Quantity = item.Quantity,
+                    Unit = string.Empty, // Not provided in the example
+                    UnitPrice = item.UnitPrice,
+                    LineTotal = item.LineTotal
+                }).ToList() ?? new List<LineItemDto>(),
+                ValidationErrors = new List<ValidationErrorDto>() // Initialize as empty
+            };
+
+            return invoiceDto;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error parsing Gemini response");
+            return CreateFailedInvoiceDto(fileName, $"Failed to parse Gemini response: {ex.Message}");
+        }
+    }
+
+    private class ExtractedInvoice
+    {
+        public string? InvoiceNumber { get; set; }
+        public DateTime? InvoiceDate { get; set; }
+        public DateTime? DueDate { get; set; }
+        public string? VendorName { get; set; }
+        public string? CustomerName { get; set; }
+        public decimal SubTotal { get; set; }
+        public decimal TaxAmount { get; set; }
+        public decimal TotalAmount { get; set; }
+        public string? Currency { get; set; }
+        public List<ExtractedLineItem>? LineItems { get; set; }
+    }
+
+    private class ExtractedLineItem
+    {
+        public string Description { get; set; } = string.Empty;
+        public decimal Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal LineTotal { get; set; }
     }
 }
 
