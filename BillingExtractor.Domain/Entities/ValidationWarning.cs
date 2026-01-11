@@ -1,13 +1,9 @@
-using BillingExtractor.Domain.Common;
-
 namespace BillingExtractor.Domain.Entities;
 
-public class ValidationWarning : EntityBase
+public class ValidationWarning
 {
     public string Code { get; private set; } = string.Empty;
     public string Message { get; private set; } = string.Empty;
-    public Guid InvoiceId { get; private set; }
-    public Invoice Invoice { get; private set; } = null!;
 
     // Private constructor for EF Core
     private ValidationWarning() { }

@@ -1,13 +1,9 @@
-using BillingExtractor.Domain.Common;
-
 namespace BillingExtractor.Domain.Entities;
 
-public class ValidationError : EntityBase
+public class ValidationError
 {
     public string Code { get; private set; } = string.Empty;
     public string Message { get; private set; } = string.Empty;
-    public Guid InvoiceId { get; private set; }
-    public Invoice Invoice { get; private set; } = null!;
 
     // Private constructor for EF Core
     private ValidationError() { }
