@@ -118,11 +118,11 @@ The application can be deployed using Docker containers:
 
 ### Quick Start with Docker Compose
 
-1. Create a `.env` file with your API keys:
+1. Create a `.env` file with your configuration. You can use the provided `.env.example` as a template:
 ```bash
-GEMINI_API_KEY=your-gemini-api-key
-GEMINI_PROJECT_ID=your-project-id
-GEMINI_LOCATION=us-central1
+# Copy the example file and update with your values
+cp .env.example .env
+# Then edit .env with your actual API keys and passwords
 ```
 
 2. Build and run the containers:
