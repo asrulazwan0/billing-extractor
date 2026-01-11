@@ -51,7 +51,10 @@ public static class DependencyInjection
         else
         {
             // Default to Gemini
-            services.AddHttpClient<GeminiService>();
+            services.AddHttpClient<GeminiService>(client =>
+            {
+                client.Timeout = TimeSpan.FromMinutes(5);
+            });
             services.Configure<GeminiOptions>(configuration.GetSection("Gemini"));
             services.AddScoped<IInvoiceExtractor, GeminiService>();
         }
