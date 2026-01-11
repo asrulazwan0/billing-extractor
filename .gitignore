@@ -1,0 +1,201 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Dd]ependencies/
+[Oo]bj/
+[Bb]in/
+[Aa]rtifacts/
+
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.suo
+*.csproj.user
+*.vbproj.user
+*.vcxproj.user
+*.vspscc
+*.vssscc
+*_i.c
+*_p.c
+*.ncb
+*.aps
+*.ilk
+*.iobj
+*.pch
+*.res
+*.pidb
+*.log
+*.lib
+*.sbr
+*.dbmdl
+*.cache
+*.VC.db
+*.VC.VC.opendb
+*.VC.db-shm
+*.VC.VC.opendb-shm
+*.VC.db-wal
+*.VC.VC.opendb-wal
+build/
+[Bb]uild/
+[Bb]uilds/
+
+# Visual Studio Code
+.vscode/
+
+# MSTest test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# NUnit
+*.VisualState.xml
+TestResult.xml
+nunit-*.xml
+
+# Build Results of an ATL Project
+[Dd]ebugPS/
+[Rr]eleasePS/
+dlldata.c
+
+# Benchmark Results
+BenchmarkDotNet.Artifacts/
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# StyleCop
+StyleCopReport.xml
+
+# Files built by Visual Studio
+*_AppDomains/
+
+# Visual Studio 2019+ cache/options
+*.ide/
+*.opendb
+*.userprefs
+
+# Local History for Visual Studio
+.localhistory/
+
+# DNX
+*.dependency-cache
+!.nuget.props
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Paket
+.paket/paket.exe
+paket-files/
+
+# FAKE
+.fake/
+
+# JetBrains Rider
+[Rr]ider/
+*.sln.iml
+*.sln.DotSettings
+*.sln.DotSettings.user
+
+# Microsoft SQL Server Migration files
+.migration/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Environment specific settings
+appsettings.Production.json
+appsettings.Staging.json
+appsettings.Local.json
+
+# Secrets and sensitive information
+**/secrets.json
+**/secrets.*.json
+**/appsettings.*.json
+**/appsettings.Development.json
+**/appsettings.Production.json
+**/appsettings.Staging.json
+**/appsettings.Local.json
+**/launchSettings.json
+**/Properties/launchSettings.json
+
+# Temporary files
+*.tmp
+*.temp
+*~
+*#
+*.swp
+*.swo
+
+# Log files
+*.log
+logs/
+log/
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Package manager caches
+.nuget/
+.npm/
+.yarn/
+bower_components/
+
+# Azure
+azure-pipelines/_generated/
+publish/
+
+# Docker
+.dockerignore
+!docker-compose.yml
+!Dockerfile
+
+# Configuration files that might contain sensitive data
+config/
+configs/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging.local
+
+# Browser-sync
+.browser-sync-client/
+.browser-sync-server/
+
+# Coverage results
+coverage/
+*.lcov
+
+# Temporary upload files
+temp/
+tmp/
