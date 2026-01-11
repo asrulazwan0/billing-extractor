@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using BillingExtractor.Domain.Entities;
+using BillingExtractor.Domain.Common;
 using BillingExtractor.Infrastructure.Persistence.Configurations;
 
 namespace BillingExtractor.Infrastructure.Persistence;
@@ -68,6 +69,9 @@ public class ApplicationDbContext : DbContext
                 ve.Property(v => v.Code).HasMaxLength(50);
                 ve.Property(v => v.Message).HasMaxLength(500);
             });
+
+        // Ignore abstract base classes
+        modelBuilder.Ignore<DomainEventBase>();
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
