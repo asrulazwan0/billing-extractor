@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Billing Extractor</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .container { display: flex; flex-direction: column; gap: 30px; }
+        .upload-section { border: 2px dashed #ccc; padding: 40px; text-align: center; border-radius: 8px; }
+        .results { background: #f5f5f5; padding: 20px; border-radius: 8px; }
+        pre { background: #fff; padding: 15px; border-radius: 4px; overflow: auto; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+        button:disabled { background: #ccc; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Billing Extractor API</h1>
+        <p>Use the API endpoints to process invoices. Full UI coming soon.</p>
+
+        <div class="upload-section">
+            <h2>Test Upload</h2>
+            <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png">
+            <button onclick="uploadFiles()" id="uploadBtn">Upload & Process</button>
+            <div id="result"></div>
+        </div>
+
+        <div class="results">
+            <h2>API Endpoints</h2>
+            <ul>
+                <li><strong>POST /api/invoices/upload</strong> - Upload and process invoices</li>
+                <li><strong>GET /api/invoices</strong> - Get all invoices</li>
+                <li><strong>GET /api/invoices/{id}</strong> - Get invoice by ID</li>
+                <li><strong>GET /health</strong> - Health check</li>
+                <li><strong>GET /swagger</strong> - API documentation</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        async function uploadFiles() {
+            const files = document.getElementById('fileInput').files;
+            if (files.length === 0) {
+                alert('Please select files first');
+                return;
+            }
+
+            const formData = new FormData();
+            for (let file of files) {
+                formData.append('files', file);
+            }
+
+            const btn = document.getElementById('uploadBtn');
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+
+            try {
+                const response = await fetch('/api/invoices/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                document.getElementById('result').innerHTML =
+                    `<h3>Results:</h3><pre>${JSON.stringify(result, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('result').innerHTML =
+                    `<p style="color: red;">Error: ${error.message}</p>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Upload & Process';
+            }
+        }
+    </script>
+</body>
+</html>
