@@ -14,15 +14,26 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        // Database
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+        // Database - Choose provider based on connection string
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (connectionString != null && connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlite(connectionString));
+        }
+        else
+        {
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer(connectionString));
+        }
 
         // Repositories
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
 
         // Services
         services.AddScoped<IInvoiceProcessingService, InvoiceProcessingService>();
+        services.AddScoped<IInvoiceValidator, InvoiceValidator>();
+        services.AddScoped<IFileProcessor, FileProcessor>();
 
         // LLM Services - Register based on configuration
         var llmProvider = configuration["LLM:Provider"] ?? "Gemini";
