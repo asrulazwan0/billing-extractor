@@ -21,9 +21,6 @@ public class GeminiService : BaseLLMService
 
         // Set up the base address for Gemini API
         _httpClient.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
-
-        // Set default headers
-        _httpClient.DefaultRequestHeaders.Clear();
     }
 
     public override async Task<InvoiceDto> ExtractInvoiceAsync(Stream fileStream, string fileName, CancellationToken cancellationToken = default)
@@ -41,8 +38,6 @@ public class GeminiService : BaseLLMService
             }
 
             var base64Content = Convert.ToBase64String(fileBytes);
-
-            // Determine MIME type
             var mimeType = GetMimeType(fileName);
 
             // Create the request payload
@@ -61,24 +56,28 @@ public class GeminiService : BaseLLMService
                 }
             };
 
-            var jsonRequest = System.Text.Json.JsonSerializer.Serialize(requestBody);
-            var content = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
+            var jsonRequest = System.Text.Json.JsonSerializer.Serialize(requestBody, new System.Text.Json.JsonSerializerOptions());
+            
+            using var content = new StringContent(jsonRequest, Encoding.UTF8, "application/json");
+            var apiUrl = $"v1/models/{_options.ModelId}:generateContent?key={_options.ApiKey}";
 
-            // Construct the API endpoint URL with the API key as a query parameter
-            // Using the same API endpoint as the working example
-            var apiUrl = $"v1beta/models/{_options.ModelId}:generateContent?key={_options.ApiKey}";
-
-            var response = await _httpClient.PostAsync(apiUrl, content, cancellationToken);
+            using var response = await _httpClient.PostAsync(apiUrl, content, cancellationToken);
+            var responseContent = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("Gemini API error: {StatusCode} - {Error}", response.StatusCode, errorContent);
-                throw new HttpRequestException($"Gemini API request failed: {response.StatusCode} - {errorContent}");
+                _logger.LogError("Gemini API error: {StatusCode} - {Error}", response.StatusCode, responseContent);
+                throw new HttpRequestException($"Gemini API request failed: {response.StatusCode} - {responseContent}");
             }
 
-            var responseContent = await response.Content.ReadAsStringAsync();
             _logger.LogDebug("Gemini API response received: {Response}", responseContent);
+
+            // Check if response is an error message instead of expected format
+            if (responseContent.Contains("\"error\":", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogError("Gemini API returned error: {Response}", responseContent);
+                throw new HttpRequestException($"Gemini API returned error: {responseContent}");
+            }
 
             return ParseGeminiResponse(responseContent, fileName);
         }
@@ -106,23 +105,45 @@ public class GeminiService : BaseLLMService
     {
         try
         {
+            // Parse the response to extract the text content from Gemini
             using var doc = System.Text.Json.JsonDocument.Parse(jsonResponse);
-            var content = doc.RootElement
-                .GetProperty("candidates")[0]
-                .GetProperty("content")
-                .GetProperty("parts")[0]
-                .GetProperty("text")
-                .GetString();
+            var candidates = doc.RootElement.GetProperty("candidates");
+            if (candidates.GetArrayLength() == 0)
+            {
+                throw new Exception("No candidates in Gemini response");
+            }
+
+            var contentElement = candidates[0].GetProperty("content");
+            var parts = contentElement.GetProperty("parts");
+            if (parts.GetArrayLength() == 0)
+            {
+                throw new Exception("No parts in Gemini content");
+            }
+
+            var textElement = parts[0].GetProperty("text");
+            var content = textElement.GetString();
 
             if (string.IsNullOrEmpty(content))
                 throw new Exception("Empty response from Gemini");
 
             // Sometimes Gemini wraps JSON in markdown blocks
-            if (content.StartsWith("```json"))
+            if (content.StartsWith("```json", StringComparison.Ordinal))
             {
-                content = content.Replace("```json", "").Replace("```", "").Trim();
+                int startIndex = 7; // Length of "```json"
+                int endIndex = content.LastIndexOf("```");
+                if (endIndex > startIndex)
+                {
+                    content = content.Substring(startIndex, endIndex - startIndex);
+                }
+                else
+                {
+                    // If there's no closing ``` , take everything after ```json
+                    content = content.Substring(startIndex);
+                }
+                content = content.Trim();
             }
 
+            // Now parse the actual JSON data
             var options = new System.Text.Json.JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -143,7 +164,7 @@ public class GeminiService : BaseLLMService
                 VendorName = extractedData.VendorName ?? "Unknown Vendor",
                 CustomerName = extractedData.CustomerName ?? string.Empty,
                 Currency = extractedData.Currency?.ToUpper() ?? "USD",
-                TotalAmount = extractedData.TotalAmount,
+                TotalAmount = extractedData.TotalAmount ?? 0,
                 TaxAmount = extractedData.TaxAmount,
                 Subtotal = extractedData.SubTotal,
                 Status = "Extracted",
@@ -152,10 +173,10 @@ public class GeminiService : BaseLLMService
                 {
                     LineNumber = index + 1,
                     Description = item.Description ?? $"Item {index + 1}",
-                    Quantity = item.Quantity,
-                    Unit = string.Empty, // Not provided in the example
-                    UnitPrice = item.UnitPrice,
-                    LineTotal = item.LineTotal
+                    Quantity = item.Quantity ?? 0,
+                    Unit = item.Unit ?? string.Empty,
+                    UnitPrice = item.UnitPrice ?? 0,
+                    LineTotal = item.LineTotal ?? (item.Quantity * item.UnitPrice) ?? 0
                 }).ToList() ?? new List<LineItemDto>(),
                 ValidationErrors = new List<ValidationErrorDto>() // Initialize as empty
             };
@@ -164,7 +185,7 @@ public class GeminiService : BaseLLMService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error parsing Gemini response");
+            _logger.LogError(ex, "Error parsing Gemini response: {Response}", jsonResponse);
             return CreateFailedInvoiceDto(fileName, $"Failed to parse Gemini response: {ex.Message}");
         }
     }
@@ -176,19 +197,20 @@ public class GeminiService : BaseLLMService
         public DateTime? DueDate { get; set; }
         public string? VendorName { get; set; }
         public string? CustomerName { get; set; }
-        public decimal SubTotal { get; set; }
-        public decimal TaxAmount { get; set; }
-        public decimal TotalAmount { get; set; }
+        public decimal? SubTotal { get; set; }
+        public decimal? TaxAmount { get; set; }
+        public decimal? TotalAmount { get; set; }
         public string? Currency { get; set; }
         public List<ExtractedLineItem>? LineItems { get; set; }
     }
 
     private class ExtractedLineItem
     {
-        public string Description { get; set; } = string.Empty;
-        public decimal Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-        public decimal LineTotal { get; set; }
+        public string? Description { get; set; }
+        public decimal? Quantity { get; set; }
+        public string? Unit { get; set; }
+        public decimal? UnitPrice { get; set; }
+        public decimal? LineTotal { get; set; }
     }
 }
 
