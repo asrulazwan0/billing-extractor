@@ -6,6 +6,7 @@ public interface IInvoiceRepository
 {
     Task<Invoice?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Invoice?> GetByNumberAsync(string invoiceNumber, string vendorName, CancellationToken cancellationToken = default);
+    Task<Invoice?> GetByFileHashAsync(string fileHash, CancellationToken cancellationToken = default);
     Task<List<Invoice>> GetAllAsync(
         int page = 1,
         int pageSize = 20,
