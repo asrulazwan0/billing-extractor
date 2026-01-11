@@ -43,7 +43,7 @@ public class ProcessInvoicesCommandHandler : IRequestHandler<ProcessInvoicesComm
                     continue;
                 }
 
-                await using var stream = file.OpenReadStream();
+                var stream = file.OpenReadStream();
                 filesToProcess.Add((stream, file.FileName));
             }
 
@@ -119,6 +119,21 @@ public class ProcessInvoicesCommandHandler : IRequestHandler<ProcessInvoicesComm
             response.Errors.Add($"Batch processing failed: {ex.Message}");
             response.Success = false;
             return response;
+        }
+        finally
+        {
+            // Ensure all streams are disposed
+            foreach (var (stream, _) in filesToProcess)
+            {
+                try
+                {
+                    await stream.DisposeAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error disposing stream");
+                }
+            }
         }
     }
 }
