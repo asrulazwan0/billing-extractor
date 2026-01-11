@@ -1,75 +1,237 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Billing Extractor</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .container { display: flex; flex-direction: column; gap: 30px; }
-        .upload-section { border: 2px dashed #ccc; padding: 40px; text-align: center; border-radius: 8px; }
-        .results { background: #f5f5f5; padding: 20px; border-radius: 8px; }
-        pre { background: #fff; padding: 15px; border-radius: 4px; overflow: auto; }
-        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
-        button:disabled { background: #ccc; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📄 Billing Extractor</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
-        <h1>Billing Extractor API</h1>
-        <p>Use the API endpoints to process invoices. Full UI coming soon.</p>
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <h1>Billing Extractor</h1>
+                </div>
+                <div class="header-info">
+                    <div class="status-indicator">
+                        <span class="status-dot" id="statusDot"></span>
+                        <span id="apiStatus">Checking API status...</span>
+                    </div>
+                    <div class="version">v1.0.0</div>
+                </div>
+            </div>
+            <p class="subtitle">AI-powered invoice processing for grocery stores</p>
+        </header>
 
-        <div class="upload-section">
-            <h2>Test Upload</h2>
-            <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png">
-            <button onclick="uploadFiles()" id="uploadBtn">Upload & Process</button>
-            <div id="result"></div>
-        </div>
+        <main>
+            <!-- Upload Section -->
+            <section class="upload-section" id="uploadSection">
+                <div class="section-header">
+                    <h2><i class="fas fa-cloud-upload-alt"></i> Upload Invoices</h2>
+                    <p class="section-subtitle">Drag & drop files or click to browse</p>
+                </div>
 
-        <div class="results">
-            <h2>API Endpoints</h2>
-            <ul>
-                <li><strong>POST /api/invoices/upload</strong> - Upload and process invoices</li>
-                <li><strong>GET /api/invoices</strong> - Get all invoices</li>
-                <li><strong>GET /api/invoices/{id}</strong> - Get invoice by ID</li>
-                <li><strong>GET /health</strong> - Health check</li>
-                <li><strong>GET /swagger</strong> - API documentation</li>
-            </ul>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                    <p class="upload-text">Drop invoice files here or click to browse</p>
+                    <p class="upload-formats">Supported formats: PDF, PNG, JPG, JPEG</p>
+                    <p class="upload-max">Max file size: 10MB each</p>
+
+                    <input type="file" id="fileInput" class="file-input" multiple
+                           accept=".pdf,.jpg,.jpeg,.png,.PDF,.JPG,.JPEG,.PNG">
+                    <label for="fileInput" class="upload-button">
+                        <i class="fas fa-folder-open"></i> Browse Files
+                    </label>
+                </div>
+
+                <div class="file-list-container" id="fileListContainer">
+                    <h3>Selected Files</h3>
+                    <div class="file-list" id="fileList">
+                        <div class="empty-state">
+                            <i class="fas fa-file"></i>
+                            <p>No files selected</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="processing-options">
+                    <h3>Processing Options</h3>
+                    <div class="options-grid">
+                        <div class="option">
+                            <input type="checkbox" id="enableValidation" checked>
+                            <label for="enableValidation">
+                                <i class="fas fa-check-circle"></i>
+                                Enable Validation
+                                <span class="option-help">Check for amount mismatches and errors</span>
+                            </label>
+                        </div>
+                        <div class="option">
+                            <input type="checkbox" id="enableDuplicateDetection" checked>
+                            <label for="enableDuplicateDetection">
+                                <i class="fas fa-copy"></i>
+                                Duplicate Detection
+                                <span class="option-help">Detect previously processed invoices</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="processBtn" disabled>
+                        <i class="fas fa-play"></i> Process Invoices
+                    </button>
+                    <button class="btn btn-secondary" id="clearBtn">
+                        <i class="fas fa-trash"></i> Clear All
+                    </button>
+                </div>
+            </section>
+
+            <!-- Loading Indicator -->
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="loading-content">
+                    <div class="spinner">
+                        <div class="spinner-inner"></div>
+                    </div>
+                    <h3>Processing Invoices</h3>
+                    <p>Extracting data using AI. This may take a moment...</p>
+                    <div class="processing-stats">
+                        <div class="stat">
+                            <span class="stat-label">Files:</span>
+                            <span class="stat-value" id="processingFiles">0</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Status:</span>
+                            <span class="stat-value" id="processingStatus">Initializing...</span>
+                        </div>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <section class="results-section" id="resultsSection">
+                <div class="section-header">
+                    <h2><i class="fas fa-chart-bar"></i> Results</h2>
+                    <div class="results-stats" id="resultsStats">
+                        <div class="stat-badge success">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Processed: <strong id="processedCount">0</strong></span>
+                        </div>
+                        <div class="stat-badge warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>Warnings: <strong id="warningCount">0</strong></span>
+                        </div>
+                        <div class="stat-badge error">
+                            <i class="fas fa-times-circle"></i>
+                            <span>Errors: <strong id="errorCount">0</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tabs" id="resultsTabs">
+                    <button class="tab active" data-tab="extracted">
+                        <i class="fas fa-file-alt"></i> Extracted Data
+                    </button>
+                    <button class="tab" data-tab="history">
+                        <i class="fas fa-history"></i> Process History
+                    </button>
+                    <button class="tab" data-tab="validation">
+                        <i class="fas fa-clipboard-check"></i> Validation Details
+                    </button>
+                </div>
+
+                <!-- Extracted Data Tab -->
+                <div class="tab-content active" id="extractedTab">
+                    <div class="invoices-container" id="invoicesContainer">
+                        <div class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <h3>No Results Yet</h3>
+                            <p>Upload and process invoices to see extracted data here</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Tab -->
+                <div class="tab-content" id="historyTab">
+                    <div class="history-container" id="historyContainer">
+                        <div class="empty-state">
+                            <i class="fas fa-history"></i>
+                            <h3>No History Yet</h3>
+                            <p>Processed invoices will appear here</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Validation Tab -->
+                <div class="tab-content" id="validationTab">
+                    <div class="validation-container" id="validationContainer">
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard-check"></i>
+                            <h3>No Validation Results</h3>
+                            <p>Validation details will appear here after processing</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="footer-content">
+                <div class="footer-info">
+                    <div class="footer-logo">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <span>Billing Extractor</span>
+                    </div>
+                    <div class="footer-links">
+                        <a href="/swagger" target="_blank">
+                            <i class="fas fa-code"></i> API Documentation
+                        </a>
+                        <a href="https://github.com/yourusername/billing-extractor" target="_blank">
+                            <i class="fab fa-github"></i> GitHub
+                        </a>
+                    </div>
+                </div>
+                <div class="footer-stats">
+                    <div class="footer-stat">
+                        <i class="fas fa-database"></i>
+                        <span>Storage: <span id="storageUsage">0 MB</span></span>
+                    </div>
+                    <div class="footer-stat">
+                        <i class="fas fa-clock"></i>
+                        <span>Last updated: <span id="lastUpdated">Just now</span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2024 Billing Extractor. AI-powered invoice processing system.</p>
+                <p class="footer-note">
+                    <i class="fas fa-info-circle"></i>
+                    This system uses AI to extract structured data from invoice documents
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Invoice Detail Modal -->
+    <div class="modal-overlay" id="invoiceModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Invoice Details</h3>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Dynamic content will be inserted here -->
+            </div>
         </div>
     </div>
 
-    <script>
-        async function uploadFiles() {
-            const files = document.getElementById('fileInput').files;
-            if (files.length === 0) {
-                alert('Please select files first');
-                return;
-            }
-
-            const formData = new FormData();
-            for (let file of files) {
-                formData.append('files', file);
-            }
-
-            const btn = document.getElementById('uploadBtn');
-            btn.disabled = true;
-            btn.textContent = 'Processing...';
-
-            try {
-                const response = await fetch('/api/invoices/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-                document.getElementById('result').innerHTML =
-                    `<h3>Results:</h3><pre>${JSON.stringify(result, null, 2)}</pre>`;
-            } catch (error) {
-                document.getElementById('result').innerHTML =
-                    `<p style="color: red;">Error: ${error.message}</p>`;
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Upload & Process';
-            }
-        }
-    </script>
+    <script src="js/app.js"></script>
 </body>
 </html>
