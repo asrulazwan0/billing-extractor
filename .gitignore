@@ -199,3 +199,6 @@ coverage/
 # Temporary upload files
 temp/
 tmp/
+
+# dev database
+billing_extractor_*
