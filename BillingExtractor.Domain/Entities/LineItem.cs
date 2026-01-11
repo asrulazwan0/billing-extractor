@@ -36,7 +36,7 @@ public class LineItem : EntityBase
         if (unitPrice.Amount < 0)
             throw new ArgumentException("Unit price cannot be negative", nameof(unitPrice));
         
-        var lineTotal = new Money(quantity * unitPrice.Amount, unitPrice.Currency);
+        var lineTotal = new Money(quantity * unitPrice.Amount, unitPrice.CurrencyCode);
         
         return new LineItem
         {
