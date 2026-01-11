@@ -215,4 +215,6 @@ For questions or issues, please contact the development team or submit an issue 
 
 ## 📄 License
 
-This project is proprietary and confidential.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+The MIT License is appropriate for this assessment project as it allows others to freely use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the software, while maintaining that the original copyright notice and disclaimer appear in all copies or substantial portions of the software.
