@@ -61,11 +61,21 @@ Create or update `appsettings.json` or `appsettings.Development.json`:
 }
 ```
 
-Alternatively, set environment variables:
+Alternatively, set environment variables (see `.env.example` for all options):
 
 ```bash
-export LLM__GEMINI__APIKEY="your-api-key-here"
-export LLM__GEMINI__PROJECTID="your-project-id"
+# LLM Configuration
+export LLM__Provider="Gemini"
+export LLM__Model="llm-model"
+
+# Gemini Configuration
+export GEMINI_API_KEY="your-gemini-api-key-here"
+export GEMINI_PROJECT_ID="your-project-id-here"
+export GEMINI_LOCATION="us-central1"
+export GEMINI__MODELID="gemini-1.5-flash"
+
+# Database
+export CONNECTION_STRING="Data Source=/app/data/billing_extractor.db"
 ```
 
 ### 3. Install Dependencies
@@ -125,16 +135,9 @@ cp .env.example .env
 # Then edit .env with your actual API keys
 ```
 
-2. Choose your database option:
-
-**Option A: SQL Server (default)**
+2. Build and run the application:
 ```bash
 docker-compose up --build
-```
-
-**Option B: SQLite (simpler setup)**
-```bash
-docker-compose -f docker-compose.sqlite.yml up --build
 ```
 
 The application will be available at `http://localhost:8080`
@@ -145,14 +148,26 @@ The application will be available at `http://localhost:8080`
 # Build the image
 docker build -t billing-extractor .
 
-# Run the container (requires database connection)
-docker run -p 8080:80 -e ConnectionStrings__DefaultConnection="..." billing-extractor
+# Run the container
+docker run -p 8080:8080 \
+  -e GEMINI_API_KEY="your-api-key" \
+  -e GEMINI_PROJECT_ID="your-project-id" \
+  -e GEMINI_LOCATION="us-central1" \
+  -e GEMINI__MODELID="gemini-1.5-flash" \
+  -e LLM__Provider="Gemini" \
+  -e CONNECTION_STRING="Data Source=/app/data/billing_extractor.db" \
+  -v ./FileStorage:/app/FileStorage \
+  -v billing-data:/app/data \
+  billing-extractor
 ```
 
-### Docker Compose Services
-- `billingextractor`: Main API application
-- `mssql`: SQL Server database for persistence
-- File storage volume for uploaded documents
+### Docker Compose Configuration
+- **Service**: `billingextractor` - Main API application
+- **Database**: SQLite (persisted in Docker volume)
+- **Volumes**:
+  - `./FileStorage:/app/FileStorage` - Uploaded invoice documents
+  - `billingextractor-data:/app/data` - SQLite database storage
+- **Port**: `8080` (host) → `8080` (container)
 
 ## 🧪 Running Tests
 
