@@ -77,7 +77,10 @@ class BillingExtractorApp {
     bindEvents() {
         // File upload events
         this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
-        this.uploadArea.addEventListener('click', () => this.fileInput.click());
+        this.uploadArea.addEventListener('click', (e) => {
+            if (e.target.closest('label') || e.target === this.fileInput) return;
+            this.fileInput.click();
+        });
         this.processBtn.addEventListener('click', () => this.processFiles());
         this.clearBtn.addEventListener('click', () => this.clearFiles());
 
@@ -165,7 +168,7 @@ class BillingExtractorApp {
         const validFiles = files.filter(file => {
             const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
             return validTypes.includes(file.type) ||
-                   file.name.match(/\.(pdf|jpg|jpeg|png)$/i);
+                file.name.match(/\.(pdf|jpg|jpeg|png)$/i);
         });
 
         if (validFiles.length === 0 && files.length > 0) {
@@ -437,10 +440,10 @@ class BillingExtractorApp {
 
     displayValidationDetails(invoices) {
         const allWarnings = invoices.flatMap(inv =>
-            (inv.validationWarnings || []).map(w => ({...w, invoiceNumber: inv.invoiceNumber, type: 'warning'}))
+            (inv.validationWarnings || []).map(w => ({ ...w, invoiceNumber: inv.invoiceNumber, type: 'warning' }))
         );
         const allErrors = invoices.flatMap(inv =>
-            (inv.validationErrors || []).map(e => ({...e, invoiceNumber: inv.invoiceNumber, type: 'error'}))
+            (inv.validationErrors || []).map(e => ({ ...e, invoiceNumber: inv.invoiceNumber, type: 'error' }))
         );
 
         const allValidations = [...allWarnings, ...allErrors];
