@@ -16,7 +16,16 @@ public static class DependencyInjection
     {
         // Database - Choose provider based on connection string
         var connectionString = configuration.GetConnectionString("DefaultConnection");
-        if (connectionString != null && connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase))
+        
+        // Detect SQLite by checking for .db file extension in connection string
+        var isSqlite = connectionString.EndsWith(".db", StringComparison.OrdinalIgnoreCase) ||
+             connectionString.Contains(".db;", StringComparison.OrdinalIgnoreCase) ||
+             connectionString.Contains(".sqlite", StringComparison.OrdinalIgnoreCase);
+        
+        Console.WriteLine($"[Database] Connection string: {connectionString}");
+        Console.WriteLine($"[Database] Using provider: {(isSqlite ? "SQLite" : "SQL Server")}");
+        
+        if (isSqlite)
         {
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlite(connectionString));
